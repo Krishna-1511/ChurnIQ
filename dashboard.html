@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ChurnIQ — Bank Customer Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0a0c10; --surface:#111318; --surface2:#181c24; --surface3:#1e2430;
+  --border:#1e2430; --border2:#2a3040;
+  --amber:#f59e0b; --red:#ef4444; --green:#22c55e; --blue:#3b82f6; --purple:#a78bfa;
+  --red-dim:rgba(239,68,68,.12); --amber-dim:rgba(245,158,11,.12); --green-dim:rgba(34,197,94,.12);
+  --text:#e2e8f0; --text2:#94a3b8; --text3:#4a5568;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+  --radius:3px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:var(--mono);font-size:1.1rem;font-weight:600;letter-spacing:-.02em;color:var(--amber)}
+.logo span{color:var(--text2);font-weight:300}
+.topbar-right{display:flex;align-items:center;gap:.75rem}
+.live-badge{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);padding:.2rem .6rem;border-radius:2px}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--mono);font-size:.75rem;font-weight:500;border:none;cursor:pointer;padding:.4rem 1rem;border-radius:var(--radius);transition:opacity .15s,background .15s;letter-spacing:.03em}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-amber{background:var(--amber);color:#000}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--text2);color:var(--text);opacity:1}
+.btn-green{background:var(--green);color:#000}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:.25rem .6rem;font-size:.68rem}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 56px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.sidebar-label{font-family:var(--mono);font-size:.65rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:0 1.25rem;margin-bottom:.75rem}
+.sidebar-section{margin-bottom:2rem}
+.nav-item{display:flex;align-items:center;gap:.65rem;padding:.55rem 1.25rem;cursor:pointer;font-size:.875rem;color:var(--text2);border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(245,158,11,.07);border-left-color:var(--amber);color:var(--amber)}
+.nav-icon{font-size:1rem;width:20px;text-align:center}
+.badge{margin-left:auto;background:var(--red);color:#fff;font-family:var(--mono);font-size:.65rem;font-weight:600;padding:.1rem .4rem;border-radius:2px}
+
+/* ── MAIN ── */
+.main{padding:2rem;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2rem}
+.kpi-card{background:var(--surface);border:1px solid var(--border);padding:1.25rem;border-radius:var(--radius);position:relative;overflow:hidden;animation:fadeUp .4s ease both}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.c-total::before{background:var(--blue)}
+.kpi-card.c-high::before{background:var(--red)}
+.kpi-card.c-medium::before{background:var(--amber)}
+.kpi-card.c-low::before{background:var(--green)}
+.kpi-card.c-avg::before{background:var(--purple)}
+.kpi-label{font-family:var(--mono);font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.kpi-value{font-family:var(--mono);font-size:2rem;font-weight:600;line-height:1}
+.c-high .kpi-value{color:var(--red)}.c-medium .kpi-value{color:var(--amber)}
+.c-low .kpi-value{color:var(--green)}.c-avg .kpi-value{color:var(--purple)}
+.kpi-sub{font-size:.75rem;color:var(--text3);margin-top:.4rem}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:1rem;margin-bottom:2rem}
+.chart-card{background:var(--surface);border:1px solid var(--border);padding:1.25rem;border-radius:var(--radius)}
+.chart-card canvas{max-height:180px}
+.section-title{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+
+/* ── ALERTS STRIP ── */
+.alert-row{display:flex;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);padding:.75rem 1rem;margin-bottom:.5rem;border-radius:0 var(--radius) var(--radius) 0;animation:fadeUp .3s ease both;transition:background .15s}
+.alert-row:hover{background:var(--surface2)}
+.alert-row.medium{border-left-color:var(--amber)}
+.alert-name{font-weight:600;font-size:.875rem;min-width:120px}
+.alert-meta{font-family:var(--mono);font-size:.72rem;color:var(--text2);flex:1}
+
+/* ── SCORE PILL ── */
+.pill{font-family:var(--mono);font-size:.72rem;font-weight:600;padding:.2rem .5rem;border-radius:2px}
+.pill.high{background:var(--red-dim);color:var(--red)}
+.pill.medium{background:var(--amber-dim);color:var(--amber)}
+.pill.low{background:var(--green-dim);color:var(--green)}
+
+/* ── TABLE ── */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-toolbar{display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.search-box{background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.4rem .75rem;border-radius:var(--radius);width:220px;outline:none;transition:border-color .15s}
+.search-box:focus{border-color:var(--amber)}
+.filter-btn{font-family:var(--mono);font-size:.72rem;background:var(--bg);border:1px solid var(--border2);color:var(--text2);cursor:pointer;padding:.35rem .75rem;border-radius:var(--radius);transition:all .15s}
+.filter-btn:hover{border-color:var(--amber);color:var(--amber)}
+.filter-btn.active-f{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.filter-btn.h-f{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+.filter-btn.m-f{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.filter-btn.l-f{border-color:var(--green);color:var(--green);background:var(--green-dim)}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg)}
+th{font-family:var(--mono);font-size:.65rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:.75rem 1rem;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{font-size:.83rem;padding:.65rem 1rem;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr.clickable:hover td{background:var(--surface2);cursor:pointer}
+.td-mono{font-family:var(--mono);font-size:.78rem}
+.td-name{font-weight:500}
+.td-dim{color:var(--text2)}
+.risk-bar-wrap{display:flex;align-items:center;gap:.5rem}
+.risk-bar{width:60px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.risk-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+.tbl-actions{display:flex;gap:.4rem}
+
+/* ── MODAL OVERLAY ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:4px;width:860px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:slideIn .25s ease}
+.modal-sm{width:520px}
+@keyframes slideIn{from{opacity:0;transform:scale(.97) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:10}
+.modal-title{font-family:var(--mono);font-size:.9rem;font-weight:600}
+.modal-actions{display:flex;gap:.5rem;align-items:center}
+.close-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.4rem;line-height:1;transition:color .15s}
+.close-btn:hover{color:var(--text)}
+.modal-body{padding:1.5rem}
+
+/* ── DETAIL MODAL ── */
+.risk-gauge{display:flex;flex-direction:column;align-items:center;padding:1.5rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.5rem}
+.gauge-score{font-family:var(--mono);font-size:3.5rem;font-weight:600;line-height:1}
+.gauge-bar{width:100%;height:8px;background:var(--border2);border-radius:4px;margin:.75rem 0 .4rem;overflow:hidden}
+.gauge-fill{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+.gauge-label{font-family:var(--mono);font-size:.8rem;font-weight:600}
+.tabs{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--mono);font-size:.75rem;padding:.6rem 1.25rem;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:var(--text)}.tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.kv-row{display:flex;justify-content:space-between;padding:.5rem .75rem;background:var(--surface2);border:1px solid var(--border);border-radius:2px;font-size:.83rem}
+.kv-key{color:var(--text2);font-family:var(--mono);font-size:.75rem}
+.kv-val{font-family:var(--mono);font-weight:500}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:.4rem}
+.form-group.full{grid-column:1/-1}
+label{font-family:var(--mono);font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.form-input, .form-select{background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.82rem;padding:.5rem .75rem;border-radius:var(--radius);outline:none;transition:border-color .15s;width:100%}
+.form-input:focus,.form-select:focus{border-color:var(--amber)}
+.form-input.err,.form-select.err{border-color:var(--red)}
+.form-select option{background:var(--surface2)}
+.form-err{font-family:var(--mono);font-size:.68rem;color:var(--red);margin-top:.2rem}
+.form-footer{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)}
+
+/* ── CONFIRM DIALOG ── */
+.confirm-box{padding:1.5rem;text-align:center}
+.confirm-icon{font-size:2.5rem;margin-bottom:1rem}
+.confirm-msg{font-size:.9rem;color:var(--text2);margin-bottom:1.5rem;line-height:1.6}
+.confirm-name{color:var(--text);font-weight:600}
+.confirm-footer{display:flex;justify-content:center;gap:.75rem}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:.78rem;padding:.75rem 1.25rem;border-radius:var(--radius);z-index:300;opacity:0;transform:translateY(8px);transition:all .25s;border-left:3px solid var(--amber)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+
+.empty{text-align:center;padding:3rem;color:var(--text3);font-family:var(--mono);font-size:.8rem}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <div class="logo">ChurnIQ <span>/ BANK INTELLIGENCE</span></div>
+  <div class="topbar-right">
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+    <button class="btn btn-outline" onclick="openAddModal()">+ Add Customer</button>
+    <button class="btn btn-amber" id="runBtn" onclick="triggerPipeline()">▶ Run Pipeline</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">⬛</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('customers',this)"><span class="nav-icon">◈</span> Customers</div>
+      <div class="nav-item" onclick="showPage('alerts',this)"><span class="nav-icon">◉</span> Alerts <span class="badge" id="alertBadge">–</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Risk Filter</div>
+      <div class="nav-item" onclick="filterRisk('High',this)"><span class="nav-icon" style="color:var(--red)">●</span> High Risk</div>
+      <div class="nav-item" onclick="filterRisk('Medium',this)"><span class="nav-icon" style="color:var(--amber)">●</span> Medium Risk</div>
+      <div class="nav-item" onclick="filterRisk('Low',this)"><span class="nav-icon" style="color:var(--green)">●</span> Low Risk</div>
+      <div class="nav-item" onclick="filterRisk(null,this)"><span class="nav-icon" style="color:var(--text3)">○</span> All Customers</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card c-total"><div class="kpi-label">Total</div><div class="kpi-value" id="kpiTotal">–</div><div class="kpi-sub">customers</div></div>
+        <div class="kpi-card c-high"><div class="kpi-label">High Risk</div><div class="kpi-value" id="kpiHigh">–</div><div class="kpi-sub">score ≥ 75</div></div>
+        <div class="kpi-card c-medium"><div class="kpi-label">Medium Risk</div><div class="kpi-value" id="kpiMedium">–</div><div class="kpi-sub">score 40–74</div></div>
+        <div class="kpi-card c-low"><div class="kpi-label">Low Risk</div><div class="kpi-value" id="kpiLow">–</div><div class="kpi-sub">score &lt; 40</div></div>
+        <div class="kpi-card c-avg"><div class="kpi-label">Avg Score</div><div class="kpi-value" id="kpiAvg">–</div><div class="kpi-sub">all customers</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card"><div class="section-title" style="margin-bottom:.75rem">Risk Distribution</div><canvas id="donutChart"></canvas></div>
+        <div class="chart-card"><div class="section-title" style="margin-bottom:.75rem">Avg Risk by Country</div><canvas id="barChart"></canvas></div>
+        <div class="chart-card"><div class="section-title" style="margin-bottom:.75rem">Top 10 High-Risk</div><canvas id="horizBar"></canvas></div>
+      </div>
+      <div class="section-header"><div class="section-title">🔴 Active Alerts</div></div>
+      <div id="alertsStrip"><div class="empty">Loading…</div></div>
+    </div>
+
+    <!-- CUSTOMERS PAGE -->
+    <div class="page" id="page-customers">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <input class="search-box" id="searchInput" placeholder="Search name / country…" oninput="filterTable()">
+          <button class="filter-btn" id="fb-all"    onclick="setTableFilter(null,'fb-all')">All</button>
+          <button class="filter-btn" id="fb-high"   onclick="setTableFilter('High','fb-high')">High</button>
+          <button class="filter-btn" id="fb-medium" onclick="setTableFilter('Medium','fb-medium')">Medium</button>
+          <button class="filter-btn" id="fb-low"    onclick="setTableFilter('Low','fb-low')">Low</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="openAddModal()">+ Add Customer</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Name</th><th>Country</th><th>Age</th>
+            <th>Credit Score</th><th>Balance</th><th>Products</th>
+            <th>Active</th><th>Risk Score</th><th>Band</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="customerTbody"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ALERTS PAGE -->
+    <div class="page" id="page-alerts">
+      <div class="section-header">
+        <div class="section-title">Active Churn Alerts</div>
+        <button class="btn btn-outline btn-sm" onclick="loadAlerts()">↻ Refresh</button>
+      </div>
+      <div id="alertsPageContent"><div class="empty">Loading…</div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── CUSTOMER DETAIL MODAL ── -->
+<div class="overlay" id="detailOverlay" onclick="closeOverlay('detailOverlay',event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detailTitle">Customer Detail</div>
+      <div class="modal-actions">
+        <button class="btn btn-outline btn-sm" id="editBtnInDetail" onclick="openEditFromDetail()">✎ Edit</button>
+        <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red)" id="deleteBtnInDetail" onclick="openDeleteFromDetail()">✕ Delete</button>
+        <button class="close-btn" onclick="closeId('detailOverlay')">×</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- ── ADD / EDIT MODAL ── -->
+<div class="overlay" id="formOverlay" onclick="closeOverlay('formOverlay',event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="formTitle">Add Customer</div>
+      <button class="close-btn" onclick="closeId('formOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Full Name *</label>
+          <input class="form-input" id="f-name" placeholder="e.g. Priya Sharma">
+          <span class="form-err" id="e-name"></span>
+        </div>
+        <div class="form-group">
+          <label>Age *</label>
+          <input class="form-input" id="f-age" type="number" min="18" max="100" placeholder="25">
+          <span class="form-err" id="e-age"></span>
+        </div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <select class="form-select" id="f-gender">
+            <option value="">Select…</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+          <span class="form-err" id="e-gender"></span>
+        </div>
+        <div class="form-group">
+          <label>Country *</label>
+          <select class="form-select" id="f-country">
+            <option value="">Select…</option>
+            <option>France</option><option>Germany</option><option>Spain</option>
+            <option>India</option><option>USA</option><option>UK</option>
+            <option>Other</option>
+          </select>
+          <span class="form-err" id="e-country"></span>
+        </div>
+        <div class="form-group">
+          <label>Estimated Salary (₹) *</label>
+          <input class="form-input" id="f-salary" type="number" min="0" placeholder="60000">
+          <span class="form-err" id="e-salary"></span>
+        </div>
+        <div class="form-group">
+          <label>Tenure (years) *</label>
+          <input class="form-input" id="f-tenure" type="number" min="0" max="50" placeholder="3">
+          <span class="form-err" id="e-tenure"></span>
+        </div>
+        <div class="form-group">
+          <label>Products Number *</label>
+          <input class="form-input" id="f-products" type="number" min="1" max="10" placeholder="2">
+          <span class="form-err" id="e-products"></span>
+        </div>
+        <div class="form-group">
+          <label>Credit Score *</label>
+          <input class="form-input" id="f-credit" type="number" min="300" max="900" placeholder="720">
+          <span class="form-err" id="e-credit"></span>
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn btn-outline" onclick="closeId('formOverlay')">Cancel</button>
+        <button class="btn btn-green" id="formSubmitBtn" onclick="submitForm()">Save Customer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE CONFIRM MODAL ── -->
+<div class="overlay" id="deleteOverlay" onclick="closeOverlay('deleteOverlay',event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Delete</div>
+      <button class="close-btn" onclick="closeId('deleteOverlay')">×</button>
+    </div>
+    <div class="confirm-box">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-msg">
+        You are about to permanently delete<br>
+        <span class="confirm-name" id="deleteTargetName">–</span><br><br>
+        This will remove all linked data — accounts, loans, cards, tickets, predictions, and alerts.
+        <br><strong style="color:var(--red)">This cannot be undone.</strong>
+      </div>
+      <div class="confirm-footer">
+        <button class="btn btn-outline" onclick="closeId('deleteOverlay')">Cancel</button>
+        <button class="btn btn-red" onclick="confirmDelete()">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════ CONFIG */
+const API = window.location.origin;
+const USE_MOCK = new URLSearchParams(location.search).get('demo') === '1';
+
+/* ═══════════════════════════════════════════════════════ STATE */
+let allCustomers = [];
+let tableFilter  = null;
+let searchQuery  = '';
+let donutChart, barChart, horizBar;
+let formMode     = 'add';   // 'add' | 'edit'
+let editingId    = null;
+let deletingId   = null;
+let detailCustomer = null;
+
+/* ═══════════════════════════════════════════════════════ INIT */
+async function init() {
+  await Promise.all([loadStats(), loadCharts(), loadCustomers(), loadAlerts()]);
+}
+
+/* ═══════════════════════════════════════════════════════ STATS */
+async function loadStats() {
+  try {
+    const d = await api('GET', '/api/stats');
+    setText('kpiTotal',  d.total_customers ?? '–');
+    setText('kpiHigh',   d.high_risk ?? '–');
+    setText('kpiMedium', d.medium_risk ?? '–');
+    setText('kpiLow',    d.low_risk ?? '–');
+    setText('kpiAvg',    d.avg_risk_score ?? '–');
+  } catch (e) {
+    setText('kpiTotal','–'); setText('kpiHigh','–'); setText('kpiMedium','–'); setText('kpiLow','–'); setText('kpiAvg','–');
+    if (USE_MOCK) {
+      setText('kpiTotal',30); setText('kpiHigh',8); setText('kpiMedium',14); setText('kpiLow',8); setText('kpiAvg','52.4');
+    } else {
+      showToast('Stats API failed — run: python load_mysql_seeds.py  then restart serve.py', 'err');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════ CHARTS */
+async function loadCharts() {
+  try {
+    const [dist, country] = await Promise.all([
+      api('GET','/api/risk-distribution'),
+      api('GET','/api/country-risk')
+    ]);
+    buildDonut(dist); buildBar(country);
+  } catch {
+    if (USE_MOCK) {
+      buildDonut([{risk_band:'High',count:8},{risk_band:'Medium',count:14},{risk_band:'Low',count:8}]);
+      buildBar([{country:'Germany',avg_risk:68},{country:'India',avg_risk:55},{country:'France',avg_risk:44},{country:'USA',avg_risk:41},{country:'UK',avg_risk:38}]);
+    } else {
+      buildDonut([{risk_band:'High',count:0},{risk_band:'Medium',count:0},{risk_band:'Low',count:0}]);
+      buildBar([]);
+    }
+  }
+}
+function buildDonut(data) {
+  const colors={High:'#ef4444',Medium:'#f59e0b',Low:'#22c55e'};
+  donutChart = new Chart(document.getElementById('donutChart'),{
+    type:'doughnut',
+    data:{labels:data.map(d=>d.risk_band),datasets:[{data:data.map(d=>d.count),backgroundColor:data.map(d=>colors[d.risk_band]||'#3b82f6'),borderColor:'#111318',borderWidth:3}]},
+    options:{plugins:{legend:{labels:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:11}}}},cutout:'65%'}
+  });
+}
+function buildBar(data) {
+  barChart = new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels:data.map(d=>d.country),datasets:[{data:data.map(d=>d.avg_risk),backgroundColor:data.map(d=>d.avg_risk>=75?'rgba(239,68,68,.7)':d.avg_risk>=40?'rgba(245,158,11,.7)':'rgba(34,197,94,.7)'),borderRadius:2}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1e2430'}},y:{ticks:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1e2430'},min:0,max:100}}}
+  });
+}
+function buildHorizBar(customers) {
+  const top10=[...customers].sort((a,b)=>b.risk_score-a.risk_score).slice(0,10);
+  if(horizBar) horizBar.destroy();
+  horizBar = new Chart(document.getElementById('horizBar'),{
+    type:'bar',
+    data:{labels:top10.map(c=>c.name.split(' ')[0]),datasets:[{data:top10.map(c=>c.risk_score),backgroundColor:top10.map(c=>c.risk_score>=75?'rgba(239,68,68,.7)':'rgba(245,158,11,.7)'),borderRadius:2}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1e2430'},min:0,max:100},y:{ticks:{color:'#e2e8f0',font:{family:'IBM Plex Mono',size:10}},grid:{display:false}}}}
+  });
+}
+
+/* ═══════════════════════════════════════════════════════ CUSTOMERS */
+async function loadCustomers() {
+  try {
+    const d = await api('GET','/api/customers?limit=2000');
+    allCustomers = d.customers || [];
+  } catch {
+    allCustomers = USE_MOCK ? getMockCustomers() : [];
+    if (!USE_MOCK) showToast('Customer list API failed — check MySQL + load_mysql_seeds.py', 'err');
+  }
+  renderTable();
+  buildHorizBar(allCustomers);
+}
+
+function renderTable() {
+  const tbody = document.getElementById('customerTbody');
+  let rows = allCustomers;
+  if (tableFilter) rows = rows.filter(c=>c.risk_band===tableFilter);
+  if (searchQuery) { const q=searchQuery.toLowerCase(); rows=rows.filter(c=>c.name.toLowerCase().includes(q)||c.country.toLowerCase().includes(q)); }
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">No customers found</td></tr>'; return; }
+  tbody.innerHTML = rows.map(c => {
+    const pct=c.risk_score||0, band=c.risk_band||'Low';
+    const col=pct>=75?'var(--red)':pct>=40?'var(--amber)':'var(--green)';
+    return `<tr class="clickable" onclick="openDetail(${c.customer_id})">
+      <td class="td-mono td-dim">#${c.customer_id}</td>
+      <td class="td-name">${esc(c.name)}</td>
+      <td class="td-dim">${esc(c.country)}</td>
+      <td class="td-mono">${c.age}</td>
+      <td class="td-mono">${c.credit_score}</td>
+      <td class="td-mono">₹${fmt(c.balance)}</td>
+      <td class="td-mono" style="text-align:center">${c.products_number}</td>
+      <td class="td-mono" style="text-align:center">${c.active_member?'✓':'–'}</td>
+      <td><div class="risk-bar-wrap"><div class="risk-bar"><div class="risk-bar-fill" style="width:${pct}%;background:${col}"></div></div><span class="td-mono" style="color:${col};min-width:36px">${pct}</span></div></td>
+      <td><span class="pill ${band.toLowerCase()}">${band}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div class="tbl-actions">
+          <button class="btn btn-outline btn-sm" onclick="openEditById(${c.customer_id})">✎</button>
+          <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red)" onclick="openDeleteById(${c.customer_id},'${esc(c.name)}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function filterTable() { searchQuery=document.getElementById('searchInput').value; renderTable(); }
+function setTableFilter(band,id) {
+  tableFilter=band;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.className='filter-btn');
+  const btn=document.getElementById(id);
+  if(band==='High') btn.classList.add('active-f','h-f');
+  else if(band==='Medium') btn.classList.add('active-f','m-f');
+  else if(band==='Low') btn.classList.add('active-f','l-f');
+  else btn.classList.add('active-f');
+  renderTable();
+}
+
+/* ═══════════════════════════════════════════════════════ DETAIL MODAL */
+async function openDetail(id) {
+  openId('detailOverlay');
+  setText('detailTitle', `Loading #${id}…`);
+  document.getElementById('detailBody').innerHTML = '<div class="empty">Fetching…</div>';
+  let c;
+  try { c = await api('GET',`/api/customers/${id}`); }
+  catch { c = allCustomers.find(x=>x.customer_id===id) || getMockCustomers()[0]; }
+  detailCustomer = c;
+  document.getElementById('editBtnInDetail').dataset.id = id;
+  document.getElementById('deleteBtnInDetail').dataset.id = id;
+  setText('detailTitle', `${c.name} — #${c.customer_id}`);
+  const rs=c.risk_score||0, band=rs>=75?'High':rs>=40?'Medium':'Low';
+  const col=rs>=75?'var(--red)':rs>=40?'var(--amber)':'var(--green)';
+  document.getElementById('detailBody').innerHTML = `
+    <div class="risk-gauge">
+      <div class="kpi-label" style="margin-bottom:.5rem">CHURN RISK SCORE</div>
+      <div class="gauge-score" style="color:${col}">${rs}</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gFill" style="width:0%;background:${col}"></div></div>
+      <div class="gauge-label" style="color:${col}">${band} Risk</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('profile',this)">Profile</div>
+      <div class="tab" onclick="switchTab('financial',this)">Financial</div>
+      <div class="tab" onclick="switchTab('behaviour',this)">Behaviour</div>
+      <div class="tab" onclick="switchTab('model',this)">Model Features</div>
+    </div>
+    <div class="tab-panel active" id="tab-profile">
+      <div class="kv-grid">
+        ${kv('Customer ID','#'+c.customer_id)}${kv('Name',c.name)}
+        ${kv('Age',c.age)}${kv('Gender',c.gender)}
+        ${kv('Country',c.country)}${kv('Tenure',c.tenure+' yrs')}
+        ${kv('Salary','₹'+fmt(c.estimated_salary))}${kv('Credit Score',c.credit_score)}
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-financial">
+      <div class="kv-grid">
+        ${kv('Balance','₹'+fmt(c.balance))}${kv('Products',c.products_number)}
+        ${kv('Credit Card',c.credit_card?'Yes':'No')}${kv('Card Type',c.card_type||'–')}
+        ${kv('Credit Limit',c.credit_limit?'₹'+fmt(c.credit_limit):'–')}${kv('Card Outstanding',c.card_outstanding?'₹'+fmt(c.card_outstanding):'–')}
+        ${kv('Active Loans',c.total_loans||0)}${kv('Loan Outstanding','₹'+fmt(c.outstanding_loans||0))}
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-behaviour">
+      <div class="kv-grid">
+        ${kv('Txns (30d)',c.txn_count_30d??'–')}${kv('Avg Balance',c.avg_balance?'₹'+fmt(c.avg_balance):'–')}
+        ${kv('Complaints',c.complaint_count??'–')}${kv('Login Freq',c.login_frequency??'–')}
+        ${kv('Active Member',c.active_member?'Yes':'No')}${kv('Score Updated',c.score_updated_at?new Date(c.score_updated_at).toLocaleString():'–')}
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-model">
+      <div class="kv-grid">
+        ${kv('credit_score',c.credit_score)}${kv('country',c.country)}
+        ${kv('gender',c.gender)}${kv('age',c.age)}
+        ${kv('tenure',c.tenure)}${kv('balance',fmt(c.balance))}
+        ${kv('products_number',c.products_number)}${kv('credit_card',c.credit_card)}
+        ${kv('active_member',c.active_member)}${kv('estimated_salary',fmt(c.estimated_salary))}
+        ${kv('→ Risk Score',rs+'%')}${kv('→ Band',band)}
+      </div>
+      <div style="margin-top:1rem;padding:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:.72rem;color:var(--text3)">
+        Model: XGBoost · Threshold: 0.60 · Scale pos weight applied · No StandardScaler
+      </div>
+    </div>`;
+  setTimeout(()=>{ const f=document.getElementById('gFill'); if(f) f.style.width=rs+'%'; },100);
+}
+function switchTab(name,el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+function openEditFromDetail()   { closeId('detailOverlay'); openEditById(detailCustomer.customer_id); }
+function openDeleteFromDetail() { closeId('detailOverlay'); openDeleteById(detailCustomer.customer_id, detailCustomer.name); }
+
+/* ═══════════════════════════════════════════════════════ ADD / EDIT FORM */
+function openAddModal() {
+  formMode='add'; editingId=null;
+  clearForm();
+  setText('formTitle','Add New Customer');
+  setText('formSubmitBtn','Save Customer');
+  openId('formOverlay');
+}
+async function openEditById(id) {
+  formMode='edit'; editingId=id;
+  clearForm();
+  setText('formTitle',`Edit Customer #${id}`);
+  setText('formSubmitBtn','Save Changes');
+  openId('formOverlay');
+  // Pre-fill
+  const c = allCustomers.find(x=>x.customer_id===id);
+  if (c) prefillForm(c);
+  else {
+    try { prefillForm(await api('GET',`/api/customers/${id}`)); } catch {}
+  }
+}
+function prefillForm(c) {
+  setVal('f-name', c.name);
+  setVal('f-age',  c.age);
+  setVal('f-gender', c.gender);
+  setVal('f-country', c.country);
+  setVal('f-salary', c.estimated_salary||c.salary||'');
+  setVal('f-tenure', c.tenure);
+  setVal('f-products', c.products_number||c.prd_number||'');
+  setVal('f-credit', c.credit_score);
+}
+function clearForm() {
+  ['f-name','f-age','f-gender','f-country','f-salary','f-tenure','f-products','f-credit'].forEach(id=>setVal(id,''));
+  ['e-name','e-age','e-gender','e-country','e-salary','e-tenure','e-products','e-credit'].forEach(id=>setText(id,''));
+  document.querySelectorAll('.form-input,.form-select').forEach(el=>el.classList.remove('err'));
+}
+function validateForm() {
+  let ok=true;
+  const rules=[
+    {id:'f-name',   eid:'e-name',    check:v=>v.trim().length>=1,       msg:'Name is required'},
+    {id:'f-age',    eid:'e-age',     check:v=>v>=18&&v<=100,            msg:'Age must be 18–100'},
+    {id:'f-gender', eid:'e-gender',  check:v=>['male','female','other'].includes(v), msg:'Select a gender'},
+    {id:'f-country',eid:'e-country', check:v=>v.length>=2,              msg:'Select a country'},
+    {id:'f-salary', eid:'e-salary',  check:v=>v>=0,                     msg:'Enter a valid salary'},
+    {id:'f-tenure', eid:'e-tenure',  check:v=>v>=0&&v<=50,              msg:'Tenure must be 0–50'},
+    {id:'f-products',eid:'e-products',check:v=>v>=1&&v<=10,             msg:'Products must be 1–10'},
+    {id:'f-credit', eid:'e-credit',  check:v=>v>=300&&v<=900,           msg:'Credit score must be 300–900'},
+  ];
+  rules.forEach(r=>{
+    const el=document.getElementById(r.id);
+    const val=el.type==='number'?Number(el.value):el.value;
+    if(!r.check(val)){
+      el.classList.add('err');
+      setText(r.eid, r.msg);
+      ok=false;
+    } else {
+      el.classList.remove('err');
+      setText(r.eid,'');
+    }
+  });
+  return ok;
+}
+async function submitForm() {
+  if (!validateForm()) return;
+  const btn=document.getElementById('formSubmitBtn');
+  btn.disabled=true; btn.textContent='Saving…';
+  const payload={
+    name:     document.getElementById('f-name').value.trim(),
+    age:      Number(document.getElementById('f-age').value),
+    gender:   document.getElementById('f-gender').value,
+    country:  document.getElementById('f-country').value,
+    salary:   Number(document.getElementById('f-salary').value),
+    tenure:   Number(document.getElementById('f-tenure').value),
+    products_number: Number(document.getElementById('f-products').value),
+    credit_score: Number(document.getElementById('f-credit').value),
+  };
+  try {
+    if (formMode==='add') {
+      const res=await api('POST','/api/customers',payload);
+      showToast(`✓ Customer created — ID #${res.customer_id}. Scoring…`, 'ok');
+      closeId('formOverlay');
+      // Trigger pipeline for the new customer
+      try { await api('POST','/api/pipeline/run',{customer_ids:[res.customer_id]}); } catch {}
+    } else {
+      await api('PUT',`/api/customers/${editingId}`,payload);
+      showToast(`✓ Customer #${editingId} updated and re-scored`, 'ok');
+      closeId('formOverlay');
+    }
+    await Promise.all([loadStats(), loadCustomers(), loadAlerts()]);
+  } catch(err) {
+    showToast('✕ Save failed: '+(err.message||'Server error'), 'err');
+  }
+  btn.disabled=false; btn.textContent=formMode==='add'?'Save Customer':'Save Changes';
+}
+
+/* ═══════════════════════════════════════════════════════ DELETE */
+function openDeleteById(id, name) {
+  deletingId=id;
+  setText('deleteTargetName', name||`Customer #${id}`);
+  openId('deleteOverlay');
+}
+async function confirmDelete() {
+  const btn=document.querySelector('#deleteOverlay .btn-red');
+  btn.disabled=true; btn.textContent='Deleting…';
+  try {
+    await api('DELETE',`/api/customers/${deletingId}`);
+    showToast(`✓ Customer #${deletingId} deleted permanently`, 'ok');
+    closeId('deleteOverlay');
+    await Promise.all([loadStats(), loadCustomers(), loadAlerts()]);
+  } catch(err) {
+    showToast('✕ Delete failed: '+(err.message||'Server error'), 'err');
+  }
+  btn.disabled=false; btn.textContent='Delete Permanently';
+}
+
+/* ═══════════════════════════════════════════════════════ ALERTS */
+async function loadAlerts() {
+  let alerts=[];
+  try { alerts=(await api('GET','/api/alerts?limit=20')).alerts; }
+  catch { alerts = USE_MOCK ? getMockAlerts() : []; }
+  const count=alerts.length;
+  setText('alertBadge', count||'0');
+  const renderStrip=(cid,actionable)=>{
+    const el=document.getElementById(cid);
+    if(!alerts.length){el.innerHTML='<div class="empty">No active alerts 🎉</div>';return;}
+    el.innerHTML=alerts.map(a=>`
+      <div class="alert-row ${a.risk_band==='Medium'?'medium':''}">
+        <div><div class="alert-name">${esc(a.name)}</div><div style="font-size:.72rem;color:var(--text3);font-family:var(--mono)">#${a.customer_id} · ${a.country} · Age ${a.age}</div></div>
+        <div class="alert-meta">${esc(a.alert_message||'Churn risk detected')}</div>
+        <span class="pill ${(a.risk_band||'High').toLowerCase()}">${a.risk_score}%</span>
+        ${actionable?`<button class="btn btn-outline btn-sm" onclick="actionAlert(event,${a.customer_id})">✓ Action</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="openDetail(${a.customer_id})">View</button>
+      </div>`).join('');
+  };
+  renderStrip('alertsStrip', false);
+  renderStrip('alertsPageContent', true);
+}
+async function actionAlert(e,id) {
+  e.stopPropagation();
+  try { await api('POST','/api/alerts/action',{customer_id:id}); } catch {}
+  showToast(`Alert for #${id} actioned`);
+  loadAlerts();
+}
+
+/* ═══════════════════════════════════════════════════════ PIPELINE */
+async function triggerPipeline() {
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true; btn.textContent='⟳ Running…';
+  showToast('Pipeline started…');
+  try {
+    const d=await api('POST','/api/pipeline/run',{customer_ids:null});
+    showToast(`✓ Scored: ${d.scored} | High: ${d.high_risk} | Med: ${d.medium_risk}`, 'ok');
+    await Promise.all([loadStats(), loadCustomers(), loadAlerts()]);
+  } catch { showToast('⚠ Pipeline unavailable', 'err'); }
+  btn.disabled=false; btn.textContent='▶ Run Pipeline';
+}
+
+/* ═══════════════════════════════════════════════════════ NAVIGATION */
+function showPage(name, navEl) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(navEl) navEl.classList.add('active');
+}
+function filterRisk(band, navEl) {
+  tableFilter=band;
+  showPage('customers', navEl);
+  renderTable();
+}
+
+/* ═══════════════════════════════════════════════════════ HELPERS */
+async function api(method, path, body) {
+  const opts={method, headers:{'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(API+path, opts);
+  if(!r.ok){
+    let msg=`HTTP ${r.status}`;
+    try{const e=await r.json();msg=e.detail||msg;}catch{}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+function openId(id)  { document.getElementById(id).classList.add('open'); }
+function closeId(id) { document.getElementById(id).classList.remove('open'); }
+function closeOverlay(id, e) { if(e.target.id===id) closeId(id); }
+function setText(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+function setVal(id, val)  { const el=document.getElementById(id); if(el) el.value=val??''; }
+function fmt(n) { return Number(n||0).toLocaleString('en-IN'); }
+function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function kv(key,val) { return `<div class="kv-row"><span class="kv-key">${key}</span><span class="kv-val">${val??'–'}</span></div>`; }
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+/* ═══════════════════════════════════════════════════════ MOCK DATA */
+function getMockCustomers() {
+  const names=['Amit','Riya','John','Emma','Rahul','Sara','David','Olivia','Karan','Neha','Alex','Sophia','Vikram','Ananya','Chris','Zara','Manish','Priya','Ethan','Mia','Arjun','Pooja','Noah','Lily','Rohit','Sneha','James','Ava','Suresh','Kavya'];
+  const countries=['India','India','USA','UK','India','India','USA','UK','India','India','USA','UK','India','India','USA','UK','India','India','USA','UK','India','India','USA','UK','India','India','USA','UK','India','India'];
+  const scores=[82,45,78,62,91,38,55,70,88,42,35,65,74,96,50,43,68,39,85,57,93,47,61,87,52,76,33,48,79,64];
+  return names.map((name,i)=>({
+    customer_id:i+1,name,country:countries[i],age:22+i,gender:i%2===0?'male':'female',
+    credit_score:600+Math.floor(Math.random()*200),balance:10000+i*3000,
+    products_number:1+i%4,credit_card:i%3!==0?1:0,active_member:i%4!==0?1:0,
+    estimated_salary:40000+i*2000,tenure:1+i%9,
+    txn_count_30d:Math.floor(Math.random()*20),complaint_count:Math.floor(Math.random()*5),
+    login_frequency:Math.floor(Math.random()*15),risk_score:scores[i],
+    risk_band:scores[i]>=75?'High':scores[i]>=40?'Medium':'Low'
+  }));
+}
+function getMockAlerts() {
+  return getMockCustomers().filter(c=>c.risk_score>=60).slice(0,6).map(c=>({
+    alert_id:c.customer_id*10,customer_id:c.customer_id,name:c.name,country:c.country,age:c.age,
+    risk_score:c.risk_score,risk_band:c.risk_band,
+    alert_message:`Customer ${c.name} has a churn risk score of ${c.risk_score}% — classified as ${c.risk_band} risk.`
+  }));
+}
+
+init();
+</script>
+</body>
+</html>

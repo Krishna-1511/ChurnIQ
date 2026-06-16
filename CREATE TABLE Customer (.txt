@@ -1,0 +1,548 @@
+CREATE TABLE Customer (
+    customer_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    gender ENUM('male','female','other'),
+    country VARCHAR(50),
+    salary DECIMAL(12,2),
+    tenure INT, -- years with bank
+    prd_number INT, 
+    credit_score INT,
+    created_at DATE
+);
+
+
+CREATE TABLE Bank (
+    bank_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    code VARCHAR(20),
+    address VARCHAR(200)
+);
+
+
+CREATE TABLE Branch (
+    branch_id INT PRIMARY KEY,
+    bank_id INT,
+    name VARCHAR(100),
+    address VARCHAR(200),
+
+    FOREIGN KEY (bank_id) REFERENCES Bank(bank_id)
+);
+
+
+
+CREATE TABLE Account (
+    account_id INT PRIMARY KEY,
+    branch_id INT,
+    account_type ENUM('savings','current'),
+    balance DECIMAL(12,2),
+    status ENUM('active','closed'),
+    created_at DATE,
+    FOREIGN KEY (branch_id) REFERENCES Branch(branch_id)
+);
+
+CREATE TABLE Account_Holders (
+    account_id INT,
+    customer_id INT,
+    role ENUM('primary','secondary'),
+
+    PRIMARY KEY (account_id, customer_id),
+
+    FOREIGN KEY (account_id) REFERENCES Account(account_id),
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+
+CREATE TABLE Transactions (
+    txn_id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT,
+    txn_type ENUM('credit','debit','transfer'),
+    amount DECIMAL(12,2),
+    txn_date DATETIME,
+    status ENUM('success','failed'),
+    reference_account INT NULL,
+
+    FOREIGN KEY (account_id) REFERENCES Account(account_id)
+);
+
+
+CREATE TABLE Support_Tickets (
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    issue_type VARCHAR(100),
+    description TEXT,
+    sentiment ENUM('positive','neutral','negative'),
+    status ENUM('open','closed'),
+    created_at DATETIME,
+    resolved_at DATETIME,
+
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+
+CREATE TABLE Loan (
+    loan_id INT PRIMARY KEY,
+    customer_id INT,
+    loan_type VARCHAR(50),
+    amount DECIMAL(12,2),
+    interest_rate DECIMAL(5,2),
+    status ENUM('active','closed'),
+
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+CREATE TABLE Loan_Payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    loan_id INT,
+    amount DECIMAL(12,2),
+    payment_date DATE,
+
+    FOREIGN KEY (loan_id) REFERENCES Loan(loan_id)
+);
+
+
+CREATE TABLE Credit_Card (
+    card_id INT PRIMARY KEY,
+    customer_id INT,
+    account_id INT,
+    card_type ENUM('visa','mastercard','rupay'),
+    credit_limit DECIMAL(12,2),
+    outstanding_balance DECIMAL(12,2),
+    status ENUM('active','blocked'),
+    expiry_date DATE,
+
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id),
+    FOREIGN KEY (account_id) REFERENCES Account(account_id)
+);
+
+CREATE TABLE Login_Activity (
+    login_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    login_time DATETIME,
+
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+
+CREATE TABLE Beneficiary (
+    beneficiary_id INT PRIMARY KEY,
+    customer_id INT,
+    beneficiary_account INT,
+
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+
+CREATE TABLE Behavior_Summary (
+    customer_id INT,
+    txn_count_30d INT,
+    avg_balance DECIMAL(12,2),
+    balance_drop_rate DECIMAL(5,2),
+    complaint_count INT,
+    login_frequency INT,
+    churn_label INT,
+
+    PRIMARY KEY (customer_id),
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+CREATE TABLE Churn_Predictions (
+    customer_id INT,
+    risk_score DECIMAL(5,2),
+    last_updated DATETIME,
+
+    PRIMARY KEY (customer_id),
+    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+);
+
+
+
+
+
+
+INSERT INTO Bank VALUES
+(1,'State Bank','SBI001','Mumbai'),
+(2,'HDFC Bank','HDFC001','Delhi');
+
+
+INSERT INTO Branch VALUES
+(1,1,'SBI Main','Mumbai'),
+(2,2,'HDFC Central','Delhi');
+
+
+
+
+INSERT INTO Customer VALUES
+(1,'Amit',25,'male','India',45000,2,2,720,'2023-01-01'),
+(2,'Riya',31,'female','India',78000,5,3,680,'2022-05-10'),
+(3,'John',45,'male','USA',120000,7,4,750,'2020-03-15'),
+(4,'Emma',29,'female','UK',65000,4,3,690,'2021-07-21'),
+(5,'Rahul',38,'male','India',90000,6,5,710,'2019-11-11'),
+(6,'Sara',27,'female','India',52000,3,2,640,'2022-02-02'),
+(7,'David',41,'male','USA',110000,8,4,770,'2018-09-19'),
+(8,'Olivia',34,'female','UK',70000,5,3,660,'2020-06-14'),
+(9,'Karan',26,'male','India',48000,2,2,600,'2023-03-01'),
+(10,'Neha',36,'female','India',82000,6,4,720,'2021-12-25'),
+(11,'Alex',28,'male','USA',95000,4,3,740,'2021-05-01'),
+(12,'Sophia',32,'female','UK',88000,5,4,730,'2020-11-11'),
+(13,'Vikram',40,'male','India',105000,7,5,760,'2019-08-08'),
+(14,'Ananya',24,'female','India',40000,1,1,610,'2024-01-01'),
+(15,'Chris',37,'male','USA',98000,6,3,700,'2020-02-20'),
+(16,'Zara',30,'female','UK',75000,5,3,690,'2021-03-03'),
+(17,'Manish',35,'male','India',83000,6,4,705,'2021-09-09'),
+(18,'Priya',29,'female','India',62000,4,3,675,'2022-06-06'),
+(19,'Ethan',43,'male','USA',115000,8,5,780,'2018-12-12'),
+(20,'Mia',33,'female','UK',71000,5,3,665,'2020-06-14'),
+(21,'Arjun',27,'male','India',54000,3,2,650,'2022-02-02'),
+(22,'Pooja',34,'female','India',77000,5,3,720,'2021-07-21'),
+(23,'Noah',39,'male','USA',102000,7,4,750,'2019-10-10'),
+(24,'Lily',26,'female','UK',60000,3,2,670,'2023-03-03'),
+(25,'Rohit',41,'male','India',92000,6,5,730,'2020-08-08'),
+(26,'Sneha',28,'female','India',58000,4,3,690,'2022-04-04'),
+(27,'James',44,'male','USA',118000,8,5,785,'2018-11-11'),
+(28,'Ava',31,'female','UK',73000,5,3,710,'2021-01-01'),
+(29,'Suresh',36,'male','India',81000,6,4,705,'2021-12-12'),
+(30,'Kavya',25,'female','India',47000,2,2,640,'2023-05-05');
+
+
+INSERT INTO Account VALUES
+(101,1,'savings',20000,'active','2023-01-01'),
+(102,1,'current',50000,'active','2022-05-10'),
+(103,2,'savings',100000,'active','2020-03-15'),
+(104,2,'current',45000,'active','2021-07-21'),
+(105,1,'savings',70000,'active','2019-11-11'),
+(106,1,'savings',15000,'active','2022-02-02'),
+(107,2,'current',120000,'active','2018-09-19'),
+(108,2,'savings',65000,'active','2020-06-14'),
+(109,1,'savings',10000,'active','2023-03-01'),
+(110,1,'current',80000,'active','2021-12-25'),
+
+(111,2,'savings',90000,'active','2021-05-01'),
+(112,2,'current',85000,'active','2020-11-11'),
+(113,1,'savings',110000,'active','2019-08-08'),
+(114,1,'savings',8000,'active','2024-01-01'),
+(115,2,'current',95000,'active','2020-02-20'),
+(116,2,'savings',70000,'active','2021-03-03'),
+(117,1,'current',82000,'active','2021-09-09'),
+(118,1,'savings',60000,'active','2022-06-06'),
+(119,2,'current',115000,'active','2018-12-12'),
+(120,2,'savings',68000,'active','2020-06-14'),
+
+(121,1,'savings',30000,'active','2022-02-02'),
+(122,1,'current',75000,'active','2021-07-21'),
+(123,2,'savings',98000,'active','2019-10-10'),
+(124,2,'savings',55000,'active','2023-03-03'),
+(125,1,'current',87000,'active','2020-08-08'),
+(126,1,'savings',62000,'active','2022-04-04'),
+(127,2,'current',118000,'active','2018-11-11'),
+(128,2,'savings',72000,'active','2021-01-01'),
+(129,1,'current',81000,'active','2021-12-12'),
+(130,1,'savings',40000,'active','2023-05-05');
+
+
+
+
+INSERT INTO Account_Holders VALUES
+(101,1,'primary'),
+(102,2,'primary'),
+(103,3,'primary'),
+(104,4,'primary'),
+(105,5,'primary'),
+(106,6,'primary'),
+(107,7,'primary'),
+(108,8,'primary'),
+(109,9,'primary'),
+(110,10,'primary'),
+
+(111,11,'primary'),
+(111,12,'secondary'),
+
+(112,12,'primary'),
+(113,13,'primary'),
+(114,14,'primary'),
+
+(115,15,'primary'),
+(115,16,'secondary'),
+
+(116,16,'primary'),
+(117,17,'primary'),
+
+(118,18,'primary'),
+(118,19,'secondary'),
+
+(119,19,'primary'),
+(120,20,'primary'),
+
+(121,21,'primary'),
+(122,22,'primary'),
+
+(123,23,'primary'),
+(123,24,'secondary'),
+
+(124,24,'primary'),
+(125,25,'primary'),
+
+(126,26,'primary'),
+(127,27,'primary'),
+
+(128,28,'primary'),
+(129,29,'primary'),
+(130,30,'primary');
+
+
+
+
+
+INSERT INTO Credit_Card VALUES
+(1,1,101,'visa',50000,10000,'active','2028-01-01'),
+(2,2,102,'mastercard',100000,20000,'active','2027-05-01'),
+(3,3,103,'rupay',75000,15000,'active','2026-03-01'),
+(4,4,104,'visa',60000,5000,'blocked','2027-07-01'),
+(5,5,105,'mastercard',120000,40000,'active','2028-11-01'),
+(6,6,106,'rupay',40000,5000,'active','2026-02-02'),
+(7,7,107,'visa',150000,60000,'active','2029-09-01'),
+(8,8,108,'mastercard',80000,20000,'active','2027-06-01'),
+(9,9,109,'rupay',30000,5000,'blocked','2026-03-01'),
+(10,10,110,'visa',90000,25000,'active','2028-12-01'),
+(11,11,111,'mastercard',95000,20000,'active','2027-05-01'),
+(12,12,112,'visa',85000,30000,'active','2026-11-01'),
+(13,13,113,'rupay',100000,40000,'active','2027-08-01'),
+(14,14,114,'visa',20000,2000,'active','2029-01-01'),
+(15,15,115,'mastercard',110000,35000,'active','2028-02-01'),
+(16,16,116,'rupay',70000,10000,'active','2027-03-01'),
+(17,17,117,'visa',90000,20000,'active','2026-09-01'),
+(18,18,118,'mastercard',65000,12000,'active','2027-06-01'),
+(19,19,119,'visa',140000,50000,'active','2028-12-01'),
+(20,20,120,'rupay',75000,15000,'active','2026-06-01'),
+(21,21,121,'visa',45000,8000,'active','2027-02-01'),
+(22,22,122,'mastercard',95000,30000,'active','2028-07-01'),
+(23,23,123,'rupay',85000,25000,'active','2027-10-01'),
+(24,24,124,'visa',60000,10000,'active','2026-03-01'),
+(25,25,125,'mastercard',100000,40000,'active','2028-08-01'),
+(26,26,126,'rupay',65000,15000,'active','2027-04-01'),
+(27,27,127,'visa',130000,60000,'active','2029-11-01'),
+(28,28,128,'mastercard',70000,20000,'active','2027-01-01'),
+(29,29,129,'visa',90000,25000,'active','2026-12-01'),
+(30,30,130,'rupay',50000,10000,'active','2027-05-01');
+
+
+
+INSERT INTO Transactions(account_id,txn_type,amount,txn_date,status,reference_account) VALUES
+(101,'credit',5000,'2024-01-01','success',NULL),
+(101,'debit',2000,'2024-01-05','success',NULL),
+(102,'credit',10000,'2024-01-02','success',NULL),
+(102,'transfer',5000,'2024-01-06','success',103),
+(103,'debit',15000,'2024-01-03','success',NULL),
+(104,'credit',8000,'2024-01-04','success',NULL),
+(105,'transfer',20000,'2024-01-07','success',106),
+(106,'debit',5000,'2024-01-08','success',NULL),
+(107,'credit',25000,'2024-01-09','success',NULL),
+(108,'debit',7000,'2024-01-10','success',NULL),
+
+(109,'debit',2000,'2024-01-11','failed',NULL),
+(110,'credit',15000,'2024-01-12','success',NULL),
+(111,'transfer',12000,'2024-01-13','success',112),
+(112,'debit',6000,'2024-01-14','success',NULL),
+(113,'credit',30000,'2024-01-15','success',NULL),
+(114,'debit',1000,'2024-01-16','success',NULL),
+(115,'transfer',20000,'2024-01-17','success',116),
+(116,'credit',7000,'2024-01-18','success',NULL),
+(117,'debit',9000,'2024-01-19','success',NULL),
+(118,'credit',11000,'2024-01-20','success',NULL),
+
+(119,'transfer',25000,'2024-01-21','success',120),
+(120,'debit',8000,'2024-01-22','success',NULL),
+(121,'credit',4000,'2024-01-23','success',NULL),
+(122,'transfer',15000,'2024-01-24','success',123),
+(123,'debit',12000,'2024-01-25','success',NULL),
+(124,'credit',9000,'2024-01-26','success',NULL),
+(125,'transfer',18000,'2024-01-27','success',126),
+(126,'debit',7000,'2024-01-28','success',NULL),
+(127,'credit',35000,'2024-01-29','success',NULL),
+(128,'debit',10000,'2024-01-30','success',NULL);
+
+
+
+INSERT INTO Support_Tickets(customer_id,issue_type,description,sentiment,status,created_at,resolved_at) VALUES
+(1,'Card Issue','Card declined','negative','open','2024-01-01',NULL),
+(2,'Login Issue','Cannot login','negative','closed','2024-01-02','2024-01-03'),
+(3,'Loan Query','Interest confusion','neutral','closed','2024-01-03','2024-01-04'),
+(4,'App Crash','Mobile app crash','negative','open','2024-01-04',NULL),
+(5,'Balance Issue','Wrong balance','negative','closed','2024-01-05','2024-01-06'),
+(6,'Card Limit','Increase request','positive','closed','2024-01-06','2024-01-07'),
+(7,'Transfer Delay','Transfer delay','negative','open','2024-01-07',NULL),
+(8,'Fraud Alert','Unauthorized txn','negative','closed','2024-01-08','2024-01-09'),
+(9,'Login Issue','OTP not received','negative','closed','2024-01-09','2024-01-10'),
+(10,'General Query','Info request','neutral','closed','2024-01-10','2024-01-11'),
+
+(11,'Card Issue','Blocked card','negative','open','2024-01-11',NULL),
+(12,'Loan Issue','Payment error','negative','closed','2024-01-12','2024-01-13'),
+(13,'App Issue','Slow app','neutral','closed','2024-01-13','2024-01-14'),
+(14,'Fraud','Suspicious activity','negative','open','2024-01-14',NULL),
+(15,'Transfer','Failed transfer','negative','closed','2024-01-15','2024-01-16'),
+(16,'Service','Bad support','negative','open','2024-01-16',NULL),
+(17,'Card','New card request','positive','closed','2024-01-17','2024-01-18'),
+(18,'Loan','Prepayment query','neutral','closed','2024-01-18','2024-01-19'),
+(19,'App','Bug issue','negative','open','2024-01-19',NULL),
+(20,'Balance','Mismatch','negative','closed','2024-01-20','2024-01-21'),
+
+(21,'Login','Password reset','neutral','closed','2024-01-21','2024-01-22'),
+(22,'Fraud','Unauthorized login','negative','open','2024-01-22',NULL),
+(23,'Card','Limit exceeded','negative','closed','2024-01-23','2024-01-24'),
+(24,'Loan','EMI delay','negative','open','2024-01-24',NULL),
+(25,'Transfer','Slow transfer','neutral','closed','2024-01-25','2024-01-26'),
+(26,'App','Crash issue','negative','open','2024-01-26',NULL),
+(27,'Service','Rude staff','negative','closed','2024-01-27','2024-01-28'),
+(28,'Card','Activation issue','neutral','closed','2024-01-28','2024-01-29'),
+(29,'Login','Account locked','negative','open','2024-01-29',NULL),
+(30,'General','Info request','positive','closed','2024-01-30','2024-01-31');
+
+
+
+
+INSERT INTO Loan VALUES
+(1,1,'home',500000,7.5,'active'),
+(2,2,'car',300000,8.0,'active'),
+(3,3,'personal',200000,10.0,'closed'),
+(4,4,'education',150000,6.5,'active'),
+(5,5,'home',700000,7.2,'active'),
+(6,6,'personal',100000,11.0,'closed'),
+(7,7,'car',400000,8.5,'active'),
+(8,8,'home',600000,7.0,'active'),
+(9,9,'personal',120000,10.5,'closed'),
+(10,10,'education',200000,6.8,'active'),
+
+(11,11,'home',550000,7.4,'active'),
+(12,12,'car',350000,8.2,'active'),
+(13,13,'personal',250000,10.2,'closed'),
+(14,14,'education',100000,6.0,'active'),
+(15,15,'home',750000,7.1,'active'),
+(16,16,'personal',150000,11.2,'closed'),
+(17,17,'car',450000,8.6,'active'),
+(18,18,'home',650000,7.3,'active'),
+(19,19,'personal',180000,10.8,'closed'),
+(20,20,'education',220000,6.7,'active'),
+
+(21,21,'home',520000,7.5,'active'),
+(22,22,'car',310000,8.1,'active'),
+(23,23,'personal',210000,10.1,'closed'),
+(24,24,'education',140000,6.4,'active'),
+(25,25,'home',720000,7.2,'active'),
+(26,26,'personal',130000,11.0,'closed'),
+(27,27,'car',420000,8.4,'active'),
+(28,28,'home',610000,7.0,'active'),
+(29,29,'personal',160000,10.6,'closed'),
+(30,30,'education',210000,6.9,'active');
+
+
+
+INSERT INTO Loan_Payments(loan_id,amount,payment_date) VALUES
+(1,10000,'2024-01-01'),
+(2,8000,'2024-01-02'),
+(3,5000,'2024-01-03'),
+(4,7000,'2024-01-04'),
+(5,12000,'2024-01-05'),
+(6,6000,'2024-01-06'),
+(7,9000,'2024-01-07'),
+(8,11000,'2024-01-08'),
+(9,4000,'2024-01-09'),
+(10,7500,'2024-01-10'),
+
+(11,9500,'2024-01-11'),
+(12,8200,'2024-01-12'),
+(13,5100,'2024-01-13'),
+(14,7200,'2024-01-14'),
+(15,12500,'2024-01-15'),
+(16,6300,'2024-01-16'),
+(17,9100,'2024-01-17'),
+(18,11200,'2024-01-18'),
+(19,4500,'2024-01-19'),
+(20,7700,'2024-01-20'),
+
+(21,10200,'2024-01-21'),
+(22,8300,'2024-01-22'),
+(23,5200,'2024-01-23'),
+(24,7100,'2024-01-24'),
+(25,12300,'2024-01-25'),
+(26,6400,'2024-01-26'),
+(27,9200,'2024-01-27'),
+(28,11300,'2024-01-28'),
+(29,4600,'2024-01-29'),
+(30,7800,'2024-01-30');
+
+
+
+
+INSERT INTO Login_Activity(customer_id,login_time) VALUES
+(1,'2024-01-01 10:00:00'),
+(2,'2024-01-02 11:00:00'),
+(3,'2024-01-03 09:30:00'),
+(4,'2024-01-04 12:00:00'),
+(5,'2024-01-05 08:45:00'),
+(6,'2024-01-06 10:15:00'),
+(7,'2024-01-07 14:00:00'),
+(8,'2024-01-08 15:00:00'),
+(9,'2024-01-09 16:00:00'),
+(10,'2024-01-10 17:00:00'),
+
+(11,'2024-01-11 10:30:00'),
+(12,'2024-01-12 11:45:00'),
+(13,'2024-01-13 09:20:00'),
+(14,'2024-01-14 13:00:00'),
+(15,'2024-01-15 08:50:00'),
+(16,'2024-01-16 10:10:00'),
+(17,'2024-01-17 14:30:00'),
+(18,'2024-01-18 15:40:00'),
+(19,'2024-01-19 16:50:00'),
+(20,'2024-01-20 17:10:00'),
+
+(21,'2024-01-21 10:00:00'),
+(22,'2024-01-22 11:00:00'),
+(23,'2024-01-23 09:30:00'),
+(24,'2024-01-24 12:00:00'),
+(25,'2024-01-25 08:45:00'),
+(26,'2024-01-26 10:15:00'),
+(27,'2024-01-27 14:00:00'),
+(28,'2024-01-28 15:00:00'),
+(29,'2024-01-29 16:00:00'),
+(30,'2024-01-30 17:00:00');
+
+
+INSERT INTO Beneficiary VALUES
+(1,1,102),
+(2,2,103),
+(3,3,104),
+(4,4,105),
+(5,5,106);
+
+
+
+
+//For Total Balance of the particular customer excluding the secondary(joint) balance
+
+SELECT 
+    h.customer_id,
+    SUM(a.balance) AS total_balance
+FROM Account a
+JOIN Account_Holders h 
+    ON a.account_id = h.account_id
+WHERE h.role = 'primary'
+GROUP BY h.customer_id;
+
+
+//FOR CHECKING WHETHER THE CREDIT CARD EXISTS OR NOT
+SELECT 
+    c.customer_id,
+    IF(cc.customer_id IS NOT NULL, 1, 0) AS credit_card
+FROM Customer c
+LEFT JOIN Credit_Card cc 
+ON c.customer_id = cc.customer_id
+GROUP BY c.customer_id;
+
+
+
+
+
+
+
+
