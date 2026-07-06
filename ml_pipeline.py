@@ -33,7 +33,7 @@ def load_model():
             log.warning(f"No ML model found at {MODEL_PATH}. Using fallback heuristic model!")
             _model = "heuristic"
     return _model
-
+# preprocess function
 def preprocess(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     customer_ids = df["customer_id"].copy()
     X = df[FEATURE_COLS].copy()
