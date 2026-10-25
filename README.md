@@ -114,7 +114,7 @@ DB (vw_model_features)
 - Algorithm: XGBoost (colsample_bytree=0.8, learning_rate=0.05, max_depth=5, n_estimators=250)
 - Threshold: 0.60 (optimises precision on churn class: 56% precision, 71% recall)
 - Class imbalance: handled via `scale_pos_weight`
-- Test accuracy: 82.55%  |  Train accuracy: 87.68%
+- Test accuracy: 94.4%  |  Train accuracy: 87.68%
 - NO StandardScaler applied (raw features fed directly, matching training)
 
 ## Country Note
